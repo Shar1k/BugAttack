@@ -21,14 +21,17 @@ public class BugAttack extends ApplicationAdapter {
 	Vector3 touch;
 	BitmapFont font;
 
-	Texture imgSnowflake;
+	Texture imgGreenBug;
+	Texture imgRedBug;
+	Texture imgGoldBug;
 	Texture imgBackGround;
-	Texture imgSoundOn, imgSoundOff;
 	Sound sndChpok;
+	Sound sndExplosion;
 
-	Snowflake[] snowflakes = new Snowflake[220];
-	MyButton btnSound;
-	boolean soundOn = true;
+	BugEntity[] bugs = new BugEntity[20];
+	BugRed[] redBugs = new BugRed[3];
+	BugGold[] goldBugs = new BugGold[1];
+
 	int score;
 	long timeStartGame, time;
 
@@ -41,15 +44,20 @@ public class BugAttack extends ApplicationAdapter {
 
 		generateFont();
 
-		imgSnowflake = new Texture("snowflake.png");
-		imgBackGround = new Texture("forest.png");
-		imgSoundOn = new Texture("soundon.png");
-		imgSoundOff = new Texture("soundoff.png");
+		imgGreenBug = new Texture("greenBug.png");
+		imgRedBug = new Texture("redBug.png");
+		imgGoldBug = new Texture("goldBug.png");
+		imgBackGround = new Texture("back.jpg");
 		sndChpok = Gdx.audio.newSound(Gdx.files.internal("sunchpok.mp3"));
+		sndExplosion = Gdx.audio.newSound(Gdx.files.internal("expl.mp3"));
 
-		btnSound = new MyButton(10, SCR_HEIGHT-60, 50);
-		for (int i = 0; i < snowflakes.length; i++) {
-			snowflakes[i] = new Snowflake();
+
+
+		for (int i = 0; i < bugs.length; i++) {
+			bugs[i] = new BugEntity();
+		}
+		for (int i = 0; i < redBugs.length; i++) {
+			redBugs[i] = new BugRed();
 		}
 
 		Gdx.input.setInputProcessor(new MyInputProcessor());
@@ -71,8 +79,11 @@ public class BugAttack extends ApplicationAdapter {
 		}*/
 
 		// события игры
-		for (int i = 0; i < snowflakes.length; i++) {
-			snowflakes[i].move();
+		for (int i = 0; i < bugs.length; i++) {
+			bugs[i].move();
+		}
+		for (int i = 0; i < redBugs.length; i++) {
+			redBugs[i].move();
 		}
 		time = TimeUtils.millis()-timeStartGame;
 
@@ -80,21 +91,25 @@ public class BugAttack extends ApplicationAdapter {
 		batch.setProjectionMatrix(camera.combined);
 		batch.begin();
 		batch.draw(imgBackGround, 0, 0, SCR_WIDTH, SCR_HEIGHT);
-		for (int i = 0; i < snowflakes.length; i++) {
-			batch.draw(imgSnowflake, snowflakes[i].x, snowflakes[i].y,
-					snowflakes[i].width/2, snowflakes[i].height/2, snowflakes[i].width, snowflakes[i].height,
-					1, 1, snowflakes[i].angle, 0, 0, 413, 477, false, false);
+		for (int i = 0; i < bugs.length; i++) {
+			batch.draw(imgGreenBug, bugs[i].x, bugs[i].y,
+					bugs[i].width/2, bugs[i].height/2, bugs[i].width, bugs[i].height,
+					1, 1, bugs[i].angle, 0, 0, 1804, 1804, false, false);
 		}
-		batch.draw(soundOn?imgSoundOn:imgSoundOff, btnSound.x, btnSound.y, btnSound.width, btnSound.height);
-		font.draw(batch, "SCORE: "+score, SCR_WIDTH-220, SCR_HEIGHT-10);
-		font.draw(batch, getTimeString(), 0, SCR_HEIGHT-10, SCR_WIDTH, Align.center, true);
+		for (int i = 0; i < redBugs.length; i++) {
+			batch.draw(imgRedBug, redBugs[i].x, redBugs[i].y,
+					redBugs[i].width/2, redBugs[i].height/2, redBugs[i].width, redBugs[i].height,
+					1, 1, bugs[i].angle, 0, 0, 1804, 1804, false, false);
+		}
+		font.draw(batch, ""+score, SCR_WIDTH-70, SCR_HEIGHT-10);
+		font.draw(batch, getTimeString(), 0, 50, SCR_WIDTH, Align.center, true);
 		batch.end();
 	}
 
 	@Override
 	public void dispose () {
 		batch.dispose();
-		imgSnowflake.dispose();
+		imgGreenBug.dispose();
 		imgBackGround.dispose();
 		sndChpok.dispose();
 	}
@@ -103,8 +118,8 @@ public class BugAttack extends ApplicationAdapter {
 		FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("isabella.ttf"));
 		FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
 		parameter.size = 40;
-		parameter.color = Color.GREEN;
-		parameter.borderColor = Color.valueOf("#03620E");
+		parameter.color = Color.BLACK;
+		parameter.borderColor = Color.WHITE;
 		parameter.borderWidth = 1;
 		parameter.shadowColor = Color.BLACK;
 		parameter.shadowOffsetX = 2;
@@ -140,16 +155,23 @@ public class BugAttack extends ApplicationAdapter {
 		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 			touch.set(screenX, screenY, 0);
 			camera.unproject(touch);
-			if(btnSound.hit(touch.x, touch.y)){
-				soundOn = !soundOn;
-			}
-			for (int i = 0; i < snowflakes.length; i++) {
-				if(snowflakes[i].hit(touch.x, touch.y)){
-					snowflakes[i].respawn();
-					if(soundOn) {
-						sndChpok.play();
-					}
+			for (int i = 0; i < bugs.length; i++) {
+				if(bugs[i].hit(touch.x, touch.y)){
+					bugs[i].respawn();
+					sndChpok.play();
 					score++;
+				}
+			}
+			for (int i = 0; i < redBugs.length; i++) {
+				if(redBugs[i].hit(touch.x, touch.y)){
+					sndExplosion.play();
+					score = 0;
+					for (int j = 0; j < redBugs.length; j++) {
+						redBugs[j].respawn();
+					}
+					for (int a = 0; a < bugs.length; a++) {
+						bugs[a].respawn();
+					}
 				}
 			}
 			return false;
